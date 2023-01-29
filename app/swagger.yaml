@@ -1,0 +1,113 @@
+components:
+  schemas:
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    Payload:
+      description: Defines field each payload should contain
+      properties:
+        payload:
+          $ref: '#/components/schemas/Request'
+      required:
+      - payload
+      title: Payload
+      type: object
+    Record:
+      description: Defines fields each record should contain
+      properties:
+        id:
+          title: Id
+          type: string
+        text:
+          title: Text
+          type: string
+      required:
+      - id
+      - text
+      title: Record
+      type: object
+    Request:
+      description: Defines fields each request should contain
+      properties:
+        fromLang:
+          title: Fromlang
+          type: string
+        records:
+          items:
+            $ref: '#/components/schemas/Record'
+          title: Records
+          type: array
+        toLang:
+          title: Tolang
+          type: string
+      required:
+      - fromLang
+      - records
+      - toLang
+      title: Request
+      type: object
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+info:
+  description: Perform machine translation through post requests
+  title: M2M Machine Translation
+  version: 0.1.0
+openapi: 3.0.2
+paths:
+  /:
+    get:
+      operationId: home__get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Home
+  /translation:
+    post:
+      operationId: translation_translation_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Payload'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Translation

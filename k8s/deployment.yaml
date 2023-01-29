@@ -1,1 +1,107 @@
 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastapi-m2m-translation
+  labels:
+    app: fastapi-m2m-translation
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fastapi-m2m-translation
+  template:
+    metadata:
+      labels:
+        app: fastapi-m2m-translation
+    spec:
+      volumes:
+        - name: shared-data
+          emptyDir: {}
+      initContainers:
+        - name: warm-up
+          image: eduardojuniolagobatista/translation:m2m
+          command: 
+            - python
+            - model.py
+          volumeMounts:
+            - name: shared-data
+              mountPath: /model
+          env:
+            - name: SAVE_WEIGHTS
+              value: /model
+          imagePullPolicy: Always
+      containers:
+        - name: model-serve
+          image: eduardojuniolagobatista/translation:m2m
+          resources:
+            limits:
+              cpu: 20
+              memory: 80Gi
+              nvidia.com/gpu: 1
+            requests:
+              cpu: 5
+              memory: 10Gi
+              nvidia.com/gpu: 1
+          ports:
+            - name: http-api
+              containerPort: 9527
+              protocol: TCP
+          volumeMounts:
+            - name: shared-data
+              mountPath: /model
+          env:
+            - name: MODEL_WEIGHTS
+              value: /model
+            - name: APP_WORKERS
+              value: '4'
+            - name: APP_CONCURRENCY
+              value: '10'
+            - name: BATCH_SIZE
+              value: '8'
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fastapi-m2m-translation
+  labels:
+    app: fastapi-m2m-translation
+spec:
+  type: ClusterIP
+  selector:
+    app: fastapi-m2m-translation
+  ports:
+  - protocol: TCP
+    port: 9527
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+ name: fastapi-m2m-translation
+spec:
+  maxReplicas: 2
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: fastapi-m2m-translation
+  metrics:
+  - type: Pods
+    pods:
+      metric:
+        name: DCGM_FI_DEV_GPU_UTIL
+      target:
+        type: AverageValue
+        averageValue: 80
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
